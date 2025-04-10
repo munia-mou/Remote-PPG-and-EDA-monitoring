@@ -1,0 +1,75 @@
+#include <Wire.h>
+//Nicl_i2c_AD5593r is the source code, without calling the arduino.bhy2 update the nicla board powers of at 46 seconds.
+//we tried watchdog timer and software reset to solve this issue., also the method used in example was not working for i2c so 
+//I shifted to pointers
+#include "Arduino_BHY2.h"
+#include "AD5593R.h"
+
+#include "mbed.h"
+int errorCount = 0;  // Counts consecutive errors before reset
+unsigned long startTime = 0;  
+long int R1=920000;
+
+// float vcc=2.496;
+
+AD5593R* adac;
+
+
+
+void setup() {
+  Serial.begin(115200);
+  while (!Serial);
+
+
+  BHY2.begin();
+  //  temp.begin();
+  Wire.begin();
+  // Wire.setClock(); // Set lower I2C speed for stability
+  Serial.println("I2C Scanner for Nicla Sense ME");
+  adac = new AD5593R();          // Now create the object safely
+  adac->enable_internal_Vref();
+  adac->set_DAC_max_1x_Vref();
+  adac->set_ADC_max_1x_Vref();
+  adac->configure_DAC(0);
+  adac->write_DAC(0, 2);
+  // adac->configure_DAC(1);
+  // adac->write_DAC(1, 1.5);
+
+// Configure IO2 as ADC
+  adac->configure_ADC(2);
+  adac->configure_ADC(3);
+  adac->configure_ADC(4);
+
+  startTime = millis(); 
+
+}
+
+
+void loop() {
+  BHY2.update();// Serial.println("\nScanning I2C devices...");
+  unsigned long elapsedTime = (millis() - startTime) / 1000; // in seconds
+
+  float vO = adac->read_ADC(2);
+  float vb = adac->read_ADC(3);
+  float vcc = adac->read_ADC(4);
+
+  Serial.print(vcc,5);
+  Serial.print(',');
+  Serial.print(vO,5);
+  Serial.print(',');
+  Serial.print(vb,5);
+  Serial.print(',');
+  float Rmeas=((vcc-vb)/(vb-vO))*R1;
+
+  Serial.println(Rmeas,5);
+
+
+}
+
+
+
+
+
+
+
+
